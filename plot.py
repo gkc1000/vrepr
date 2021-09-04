@@ -14,6 +14,8 @@ A = np.load("col.npy")
 fig, ax = plt.subplots(figsize=(7, 6))
 im = ax.imshow(A, cmap='Blues', vmin=0.0)
 
+ax.set_ylabel("$n$")
+ax.set_xlabel(r"$\theta$")
 
 plt.show()
-#plt.savefig("test.png", dpi=200)
+#plt.savefig("fun.png", dpi=200)
