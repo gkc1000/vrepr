@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import numpy as np
 import scipy.optimize
 
@@ -31,7 +32,8 @@ def unitdm(u):
     #print (h)
     #print (e)
     #print(v)
-    dm = np.outer(v[:,0], v[:,0]) + np.outer(v[:,1], v[:,1])
+    #dm = np.outer(v[:,0], v[:,0]) + np.outer(v[:,1], v[:,1])
+    dm = np.outer(v[:,0], v[:,0]) + np.outer(v[:,3], v[:,3])
     #print (dm)
     return dm[:2,:2]
 
@@ -62,8 +64,10 @@ def fit(rho):
 
 
 def test():
-    for n in np.arange(0.1, 1.0, 0.1):
-        for angle in np.arange(0.1, 2.0, 0.1):
+    col = []
+    for n in np.linspace(0.0, 1.0, 31):
+        col_tmp = []
+        for angle in np.linspace(0, np.pi, 31):
             rho0 = genrho(n, np.pi*angle)
             print("target\n", rho0)
             print(np.linalg.eigvalsh(rho0))
@@ -71,4 +75,11 @@ def test():
             print("fit error", fun)
             print("fitted\n", unitdm(ufit))
             print("gap\n",gap(ufit))
+            col_tmp.append(fun)
+        col.append(col_tmp)
+    col = np.array(col)
+    np.save("col.npy", col)
+    print (col)
 
+if __name__ == '__main__':
+    test()
