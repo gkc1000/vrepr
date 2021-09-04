@@ -33,7 +33,7 @@ def unitdm(u):
     #print (e)
     #print(v)
     #dm = np.outer(v[:,0], v[:,0]) + np.outer(v[:,1], v[:,1])
-    dm = np.outer(v[:,0], v[:,0]) + np.outer(v[:,3], v[:,3])
+    dm = np.outer(v[:,0], v[:,0]) + np.outer(v[:,1], v[:,1])
     #print (dm)
     return dm[:2,:2]
 
@@ -65,8 +65,10 @@ def fit(rho):
 
 def test():
     col = []
+    gap_col = []
     for n in np.linspace(0.0, 1.0, 31):
         col_tmp = []
+        gap_tmp = []
         for angle in np.linspace(0, np.pi, 31):
             rho0 = genrho(n, np.pi*angle)
             print("target\n", rho0)
@@ -76,9 +78,14 @@ def test():
             print("fitted\n", unitdm(ufit))
             print("gap\n",gap(ufit))
             col_tmp.append(fun)
+            gap_tmp.append(gap(ufit))
+
         col.append(col_tmp)
+        gap_col.append(gap_tmp)
     col = np.array(col)
     np.save("col.npy", col)
+    gap_col = np.array(gap_col)
+    np.save("gap_col.npy", gap_col)
     print (col)
 
 if __name__ == '__main__':

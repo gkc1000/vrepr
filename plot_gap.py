@@ -10,7 +10,7 @@ matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 
 
-A = np.load("col.npy")
+A = np.log10(np.load("gap_col.npy"))
 fig, ax = plt.subplots(figsize=(7, 6))
 im = ax.imshow(A, cmap='Blues', vmin=0.0)
 
