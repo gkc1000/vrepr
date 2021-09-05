@@ -10,9 +10,10 @@ matplotlib.rcParams['mathtext.fontset'] = 'stix'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
 
 
-A = np.log10(np.load("gap_col.npy")[1:-1])
+A = np.load("u0_col.npy")[1:-1]
 fig, ax = plt.subplots(figsize=(7, 6))
-im = ax.imshow(A, cmap='Blues', vmin=1e-12)
+#im = ax.imshow(A, cmap='Blues', vmin=1e-12)
+im = ax.imshow(A, cmap='coolwarm')
 
 ax.set_ylabel("$n$")
 ax.set_xlabel(r"$\theta$")

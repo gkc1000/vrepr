@@ -51,24 +51,28 @@ def gap(u):
     e,v = np.linalg.eigh(h)
     return e[2]-e[1]
 
-
-    
-
 def fit(rho):
     def error(u):
         val = np.linalg.norm(rho-unitdm(u))
         return val
-    u0 = np.array([0.1,0.3])
-    res = scipy.optimize.minimize(error, u0, options={"disp":True, "gtol":1.e-3})
-    return res.x, res.fun
-
+    u0 = np.array([0.0, 0.0])
+    #res = scipy.optimize.minimize(error, u0, method='BFGS', options={"disp":True, "gtol":1.e-4})
+    #res = scipy.optimize.minimize(error, u0, method='L-BFGS-B', options={"disp":True, "gtol":1.e-4})
+    #return res.x, res.fun
+    res = scipy.optimize.brute(error, (slice(-0.5, 0.5, 0.05), slice(-4, 4, 0.25)),
+            full_output=True, finish=scipy.optimize.fmin)
+    return res[0], res[1]
 
 def test():
     col = []
     gap_col = []
+    u0_col = []
+    u1_col = []
     for n in np.linspace(0.0, 1.0, 31):
         col_tmp = []
         gap_tmp = []
+        u0_tmp = []
+        u1_tmp = []
         for angle in np.linspace(0, np.pi, 31):
             rho0 = genrho(n, np.pi*angle)
             print("target\n", rho0)
@@ -79,13 +83,22 @@ def test():
             print("gap\n",gap(ufit))
             col_tmp.append(fun)
             gap_tmp.append(gap(ufit))
+            u0_tmp.append(ufit[0])
+            u1_tmp.append(ufit[1])
 
         col.append(col_tmp)
         gap_col.append(gap_tmp)
+        u0_col.append(u0_tmp)
+        u1_col.append(u1_tmp)
+
     col = np.array(col)
     np.save("col.npy", col)
     gap_col = np.array(gap_col)
     np.save("gap_col.npy", gap_col)
+    u0_col = np.array(u0_col)
+    np.save("u0_col.npy", u0_col)
+    u1_col = np.array(u1_col)
+    np.save("u1_col.npy", u1_col)
     print (col)
 
 if __name__ == '__main__':
