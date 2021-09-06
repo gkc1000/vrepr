@@ -1,56 +1,93 @@
 #!/usr/bin/env python
-import numpy as np
-import scipy.optimize
 
-def genrho(n, theta):
+import numpy as np
+from scipy import linalg as la
+from scipy import optimize as opt
+
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.colors as mpcolors
+matplotlib.rcParams['mathtext.fontset'] = 'stix'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
+
+def gen_rho(n, theta):
     """
-    2x2 density matrix for two sites
+    2x2 density matrix for two sites.
     """
-    assert 0<=n<=1
-    occ = np.diag([n, 1.-n])
-    u = np.array([[np.cos(theta), np.sin(theta)],
-                  [-np.sin(theta), np.cos(theta)]])
-    return np.dot(u.T, np.dot(occ, u))
+    assert 0 <= n <= 1
+    occ = np.array([n, 1.0 - n])
+    u = np.array([[np.cos(theta), -np.sin(theta)],
+                  [np.sin(theta), np.cos(theta)]])
+    return np.dot(u * occ, u.T)
+
+def test_gen_rho():
+    n = 0.5
+    theta = 0.0
+    assert la.norm(gen_rho(n, theta) - np.diag([0.5, 0.5])) < 1e-12
+    
+    n = 0.1
+    theta = 0.0
+    assert la.norm(gen_rho(n, theta) - np.diag([0.1, 0.9])) < 1e-12
+    
+    n = 0.1
+    theta = np.pi
+    assert la.norm(gen_rho(n, theta) - np.diag([0.1, 0.9])) < 1e-12
+    
+    n = 0.1
+    theta = np.pi * 0.5
+    assert la.norm(gen_rho(n, theta) - np.diag([0.9, 0.1])) < 1e-12
 
 def tb(L, pbc=False):
     """
-    tight-binding Hamiltonian for lattice of length L
+    1D tight-binding Hamiltonian for lattice of length L
     """
-    h = np.zeros([L,L])
-    for i in range(L):
-        for j in range(L):
-            if abs(i-j)==1: h[i,j]=1.
-    #pbc=True
+    h = np.zeros((L, L))
+    for i in range(L-1):
+        h[i, i+1] = h[i+1, i] = 1.0
+
     if pbc:
-        h[0,-1]=1.
-        h[-1,0]=1.
+        h[0, -1] = 1.0
+        h[-1, 0] = 1.0
     return h
+
+def test_tb():
+    h_tb = tb(6)
+    assert np.allclose(h_tb.diagonal(offset=1) , 1)
+    assert np.allclose(h_tb.diagonal(offset=-1), 1)
+    
+    h_tb = tb(6, pbc=True)
+    assert np.allclose(h_tb.diagonal() , 0)
+    assert np.allclose(h_tb.diagonal(offset=1) , 1)
+    assert np.allclose(h_tb.diagonal(offset=-1), 1)
+    assert h_tb[0, 5] == 1.0
+    assert h_tb[5, 0] == 1.0
     
 def unitdm4(u, full=False):
-    h =tb(4)
-    h[0,1] += u[0]
-    h[1,0] += u[0]
-    h[1,1] += u[1]
-    h[2,3] += u[0]
-    h[3,2] += u[0]
-    h[2,2] += u[1]
-    
-    e,v = np.linalg.eigh(h)
+    h = tb(4)
+    nao = 2
+    nocc = 2
+    h[0, 1] += u[0]
+    h[1, 0] += u[0]
+    h[1, 1] += u[1]
 
-    dm = np.outer(v[:,0], v[:,0]) + np.outer(v[:,1], v[:,1])
+    h[2, 3] += u[0]
+    h[3, 2] += u[0]
+    h[2, 2] += u[1]
+    
+    e, v = np.linalg.eigh(h)
+    dm = np.dot(v[:nocc], v[:nocc].conj().T)
     if full:
         return dm
     else:
-        return dm[:2,:2]
-
+        return dm[:nao, :nao]
 
 def add_u_pbc(h, u):
-    L=h.shape[0]
+    L = h.shape[0]
     hu = h.copy()
     for c in range(L//2):
-        hu[2*c,2*c+1] += u[0]
-        hu[2*c+1,2*c] += u[0]
-        hu[2*c+1,2*c+1] += u[1]
+        hu[2*c, 2*c+1] += u[0]
+        hu[2*c+1, 2*c] += u[0]
+        hu[2*c+1, 2*c+1] += u[1]
     return hu
     
 def dm_pbc(u, L, occ=None):
@@ -180,7 +217,7 @@ def test_equality():
     # check local vs global
     n = 0.05
     angle = 0.3*np.pi
-    rho0 = genrho(n, np.pi*angle)
+    rho0 = gen_rho(n, np.pi*angle)
     
     l = 6
     for n in np.linspace(0.0, 1.0, 31):
@@ -189,7 +226,7 @@ def test_equality():
         u0_tmp = []
         u1_tmp = []
         for angle in np.linspace(0, np.pi, 31):
-            rho0 = genrho(n, np.pi*angle)
+            rho0 = gen_rho(n, np.pi*angle)
 
             print(np.linalg.eigvalsh(rho0))
             ufit, fun = fit(rho0,l)
@@ -237,65 +274,62 @@ def test():
     u0_col = []
     u1_col = []
 
+#    ##### This code is to plot the surface of u for a given rho0 ########
+#    n = 0.05
+#    angle = 0.3*np.pi
+#    rho0 = gen_rho(n, np.pi*angle)
+#    print(rho0)
+#    print("rho0 eigs", np.linalg.eigvalsh(rho0))
+#    ufit, fun = fit(rho0, unitdm4)
+#    print(gap4(ufit))
+#    print(ufit, fun)
+#
+#    print("dm eigs", np.linalg.eigvalsh(unitdm4(ufit)))
+#    
+#    for u0 in np.linspace(-3.,3.,30):
+#        col_tmp = []
+#        u0_tmp = []
+#        u1_tmp = []
+#
+#        for u1 in np.linspace (-3., 3., 30):
+#            val = np.linalg.norm(rho0-unitdm4([u0,u1]))
+#            print(rho0)
+#            print(unitdm4([u0,u1]))
+#            print("dm eigs", np.linalg.eigvalsh(unitdm4([u0,u1])))
+#            print("gap", gap4([u0,u1]))
+#            print("params, val", u0, u1, val)
+#            col_tmp.append(val)
+#            u0_tmp.append(u0)
+#            u1_tmp.append(u1)
+#
+#        col.append(col_tmp)
+#        u0_col.append(u0_tmp)
+#        u1_col.append(u1_tmp)
 
-
-    
-    ##### This code is to plot the surface of u for a given rho0 ########
-    n = 0.05
-    angle = 0.3*np.pi
-    rho0 = genrho(n, np.pi*angle)
-    print(rho0)
-    print("rho0 eigs", np.linalg.eigvalsh(rho0))
-    ufit, fun = fit(rho0, unitdm4)
-    print(gap4(ufit))
-    print(ufit, fun)
-
-    print("dm eigs", np.linalg.eigvalsh(unitdm4(ufit)))
-    
-    for u0 in np.linspace(-3.,3.,30):
+    #### This code tests the 6 site pbc model    
+    l = 6
+    for n in np.linspace(0.0, 1.0, 31):
         col_tmp = []
+        gap_tmp = []
         u0_tmp = []
         u1_tmp = []
-
-        for u1 in np.linspace (-3., 3., 30):
-            val = np.linalg.norm(rho0-unitdm4([u0,u1]))
-            print(rho0)
-            print(unitdm4([u0,u1]))
-            print("dm eigs", np.linalg.eigvalsh(unitdm4([u0,u1])))
-            print("gap", gap4([u0,u1]))
-            print("params, val", u0, u1, val)
-            col_tmp.append(val)
-            u0_tmp.append(u0)
-            u1_tmp.append(u1)
+        for angle in np.linspace(0, np.pi, 31):
+            rho0 = gen_rho(n, np.pi*angle)
+            print("target\n", rho0)
+            print(np.linalg.eigvalsh(rho0))
+            ufit, fun = fit(rho0,l)
+            print("fit error", fun)
+            print("fitted\n", unitdm_pbc(ufit,l))
+            print("gap\n",gap_pbc(ufit,l))
+            col_tmp.append(fun)
+            gap_tmp.append(gap_pbc(ufit,l))
+            u0_tmp.append(ufit[0])
+            u1_tmp.append(ufit[1])
 
         col.append(col_tmp)
+        gap_col.append(gap_tmp)
         u0_col.append(u0_tmp)
         u1_col.append(u1_tmp)
-
-    ##### This code tests the 6 site pbc model    
-    # l = 6
-    # for n in np.linspace(0.0, 1.0, 31):
-    #     col_tmp = []
-    #     gap_tmp = []
-    #     u0_tmp = []
-    #     u1_tmp = []
-    #     for angle in np.linspace(0, np.pi, 31):
-    #         rho0 = genrho(n, np.pi*angle)
-    #         print("target\n", rho0)
-    #         print(np.linalg.eigvalsh(rho0))
-    #         ufit, fun = fit(rho0,l)
-    #         print("fit error", fun)
-    #         print("fitted\n", unitdm_pbc(ufit,l))
-    #         print("gap\n",gap_pbc(ufit,l))
-    #         col_tmp.append(fun)
-    #         gap_tmp.append(gap_pbc(ufit,l))
-    #         u0_tmp.append(ufit[0])
-    #         u1_tmp.append(ufit[1])
-
-    #     col.append(col_tmp)
-    #     gap_col.append(gap_tmp)
-    #     u0_col.append(u0_tmp)
-    #     u1_col.append(u1_tmp)
 
     col = np.array(col)
     np.save("col.npy", col)
@@ -308,4 +342,10 @@ def test():
     print (col)
 
 if __name__ == '__main__':
-    test()
+    test_gen_rho()
+    test_tb()
+    exit()
+
+    print (gen_rho(n, theta))
+    #test()
+    test_equality()
