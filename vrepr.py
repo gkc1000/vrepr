@@ -110,7 +110,7 @@ def fit_local(rho,L,occ=None,method="bfgs"):
     local u fit
     """
     def error(u,occ=occ):
-        h_emb=get_embedding_h(u,L,occ)
+        h_emb=get_embedding_h(u,L)
         dm=np.zeros_like(h_emb)
         e,v=np.linalg.eigh(h_emb)
         if occ is None:
