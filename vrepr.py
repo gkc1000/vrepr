@@ -141,7 +141,7 @@ def generate_data(occ,occ_loc):
     l = 6
     occstr = "".join(str(o) for o in occ)
     occlocstr = "".join(str(o) for o in occ_loc)
-    with open("data"+occstr+occlocstr, "w", newline='') as datafile:
+    with open("data"+occstr+occlocstr+".csv", "w", newline='') as datafile:
         writer = csv.writer(datafile)
         writer.writerow(["n", "angle", "fun", "fun_local", "gap", "gap_loc", "small_gap", "small_gap_loc", "large_gap", "large_gap_loc", "big_diff"])
         for n in np.linspace(0.0, 1.0, 31):
