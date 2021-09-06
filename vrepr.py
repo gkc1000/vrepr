@@ -35,7 +35,6 @@ def tb(L, pbc=False):
         h[-1, 0] = 1.0
     return h
 
-
 def add_u_pbc(h, u):
     L = h.shape[0]
     hu = h.copy()
@@ -46,18 +45,25 @@ def add_u_pbc(h, u):
     return hu
     
 def dm_pbc(u, L, occ=None):
-    h=tb(L,pbc=True)
+    h=tb(L, pbc=True)
     h = add_u_pbc(h, u)
-
     e,v = np.linalg.eigh(h)
-    dm = np.zeros([L,L])
+    #dm = np.zeros([L,L])
+    #if occ is None:
+    #    occ = range(L//2)
+    #for i in occ:
+    #    dm += np.outer(v[:,i], v[:,i])
     if occ is None:
-        occ = range(L//2)
-    for i in occ:
-        dm += np.outer(v[:,i], v[:,i])
+        occ = np.zeros((L,))
+        occ[:L//2] = 1.0
+    elif len(occ) < L:
+        occ_idx = occ
+        occ = np.zeros((L,))
+        occ[occ_idx] = 1.0
+
+    dm = np.dot(v*occ, v.conj().T)
     return dm
 
-    
 def gap_pbc(u, L):
     """
     half-filled gap, assuming pbc tb, chain L, and correlation potential u
@@ -69,7 +75,7 @@ def gap_pbc(u, L):
         h[2*c+1,2*c+1] += u[1]
 
     e,v = np.linalg.eigh(h)
-    return e[L//2]-e[L//2-1]
+    return e[L//2] - e[L//2-1]
 
 def get_embedding_h(u,L,occ=None):
     """
@@ -77,7 +83,7 @@ def get_embedding_h(u,L,occ=None):
     """
     h_pbc=tb(L,pbc=True)
     h_pbc = add_u_pbc(h_pbc, u)
-    dm=dm_pbc(u,L,occ)
+    dm=dm_pbc(u, L, occ=occ)
     u,s,v=np.linalg.svd(dm[:2,2:], full_matrices=False)
 
     basis = np.zeros([L, 4])
@@ -85,18 +91,18 @@ def get_embedding_h(u,L,occ=None):
     basis[2:,2:]=v.T
     return np.dot(basis.T, np.dot(h_pbc, basis))
     
-def fit(rho,L,occ=None,method="bfgs"):
+def fit(rho, L, occ=None, method="bfgs"):
     """
     global fit
     """
-    def error(u,occ=occ):
+    def error(u, occ=occ):
         dm = dm_pbc(u, L, occ)
         val = np.linalg.norm(rho-dm[:2,:2])
         return val
-    u0 = np.array([0.1, 0.3])
+    u0 = np.array([0.0, 0.0])
     if method == "bfgs":
         res = scipy.optimize.minimize(error, u0, method='bfgs', options={"disp":True, "gtol":1.e-6})
-        return res.x, res.fun#[0], res[1]
+        return res.x, res.fun
     elif method =="brute":
 
         res = scipy.optimize.brute(error, (slice(-3, 3, 0.05), slice(-4, 4, 0.25)),
@@ -114,7 +120,7 @@ def fit_local(rho,L,occ=None,method="bfgs"):
         dm=np.zeros_like(h_emb)
         e,v=np.linalg.eigh(h_emb)
         if occ is None:
-            occ = [0,1]
+            occ = [0, 1]
         for i in occ:
             dm+=np.outer(v[:,i],v[:,i])
         val = np.linalg.norm(rho-dm[:2,:2])
@@ -141,11 +147,11 @@ def generate_data(occ,occ_loc):
     l = 6
     occstr = "".join(str(o) for o in occ)
     occlocstr = "".join(str(o) for o in occ_loc)
-    with open("data"+occstr+occlocstr+".csv", "w", newline='') as datafile:
+    with open("data"+"_"+occstr+"_"+occlocstr+".csv", "w", newline='') as datafile:
         writer = csv.writer(datafile)
         writer.writerow(["n", "angle", "fun", "fun_local", "gap", "gap_loc", "small_gap", "small_gap_loc", "large_gap", "large_gap_loc", "big_diff"])
         for n in np.linspace(0.0, 1.0, 31):
-            for angle in np.linspace(0, np.pi, 31):
+            for angle in np.linspace(0, np.pi*0.5, 31):
                 rho0 = gen_rho(n, np.pi*angle)
                 ufit, fun = fit(rho0,l,occ)
                 ufit_local, fun_local = fit_local(rho0,l,occ_loc)
@@ -360,4 +366,5 @@ def generate_data(occ,occ_loc):
 #     #test()
 #     test_equality()
 if __name__=='__main__':
-    generate_data([0,1,2],[0,1])
+    #generate_data([0,1,2],[0,1])
+    generate_data([1, 1, 1, 0, 0, 0],[0,1])
